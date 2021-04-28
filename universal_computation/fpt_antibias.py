@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+import tensorflow as tf
 
 class FPTAntiBias(nn.Module):
 
@@ -61,11 +61,13 @@ class FPTAntiBias(nn.Module):
             raise NotImplementedError('model_name not implemented')
         
         # TODO: Embedding layer
-        self.wte = pretrained_transformer.wte#weights of token embedding, type: tensor
-        self.wpe = pretrained_transformer.wpe #weights of positional embedding, type: tensor
+        self.wte = pretrained_transformer.wte #token embedding layer,
+        self.wpe = pretrained_transformer.wpe #positional embedding layer,
         
-        # if position_ids is None:
-        #     position_ids = 
+        if position_ids is None:
+            position_ids = tf.range(0, input_max_dim, dtype=tf.int32)[tf.newaxis, :]
+        self.position_ids = position_ids
+        self.position_embeds = self.wpe(position_ids)
 
         # linear layer between transformer and embedding layers
         linear_layer = []
@@ -137,12 +139,15 @@ class FPTAntiBias(nn.Module):
         #     target_x[...,:orig_dim] = x
         #     x = target_x
 
-        # token embedding 
-        x=  self.emb_layer(x)
+        # token embedding + positional embedding 
+        x = self.wte(x, mode="embedding") + self.position_embeds
+
+        # pass throught linear layers
         x = self.linear_net(x)
 
+        
         transformer_outputs = self.transformer(
-            inputs_embeds=x, # that's how the embeded vector is passed into the embedding layer.
+            inputs_embeds=x, 
             return_dict=True,
             output_attentions=output_attentions,
         )
