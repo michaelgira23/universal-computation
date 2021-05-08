@@ -33,8 +33,8 @@ def experiment(
     task = kwargs['task']
     batch_size = kwargs['batch_size']
     device = exp_args['device']
-    model_name = 
-    input_max_dim = 
+    model_name = kwargs.get('model_name', 'gpt2')
+    input_max_dim = # TODO
 
 
 
@@ -43,21 +43,21 @@ def experiment(
 
     from universal_computation.datasets.anti_bias import AntiBiasDataset
     dataset = AntiBiasDataset(batch_size=batch_size,model_name = model_name, input_max_dim = input_max_dim, device=device)
-    input_dim, output_dim = 15, 10
+    output_dim = 15 #TODO
     use_embeddings = True
 
     experiment_type = #TODO
     ce_loss = #TODO
     loss_fn = #TODO
     accuracy_fn = #TODO
-    
+
 
 
 
     model = FPTAntiBias(
         input_max_dim=input_max_dim,
         output_dim=output_dim,
-        model_name=kwargs.get('model_name', 'gpt2'),
+        model_name=model_name,
         pretrained=kwargs.get('pretrained', True),
         return_last_only=return_last_only,
         use_embeddings_for_in=use_embeddings,
