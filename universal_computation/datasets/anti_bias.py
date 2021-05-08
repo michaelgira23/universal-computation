@@ -9,7 +9,7 @@ import tensorflow_datasets as tfds
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 class AntiBiasDataset(Dataset):
-    def __init__(self, batch_size, data_dir,model_name = "gpt2",max_length = 50,*args, **kwargs):
+    def __init__(self, batch_size, data_dir,model_name = "gpt2",input_max_dim = 50,*args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.batch_size = batch_size  # we fix it so we can use dataloader
@@ -41,14 +41,14 @@ class AntiBiasDataset(Dataset):
         # tokenize sentences
         def tokenize(d):
             return {
-                'inputs': self.tokenizer(d['sentence'],return_tensors='pt')[:max_length],
+                'inputs': self.tokenizer(d['sentence'],return_tensors='pt')[:input_max_dim],
                 'label': d['label']
             }
 
         train_dataset = self.d_train_str.map(tokenize, num_parallel_calls=AUTOTUNE)
         test_dataset = self.d_test_str.map(tokenize, num_parallel_calls=AUTOTUNE)
 
-        max_shape = {'inputs': [max_length], 'label': []}
+        max_shape = {'inputs': [input_max_dim], 'label': []}
         train_dataset = train_dataset.shuffle(
             buffer_size=1024, reshuffle_each_iteration=True).padded_batch(
                 batch_size, padded_shapes=max_shape)
@@ -61,7 +61,7 @@ class AntiBiasDataset(Dataset):
         self.test_enum = iter(tensorflow_datasets.as_numpy(self.test_dataset))
 
     
-    def get_batch(self, batch_size=None, max_length=50, model_name = "gpt2", train=True):
+    def get_batch(self, batch_size=None, input_max_dim=50, model_name = "gpt2", train=True):
         if train:
             batch = next(self.train_enum, None)
             if batch is None:
