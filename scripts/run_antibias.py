@@ -11,8 +11,7 @@ if __name__ == '__main__':
         patch_size=50,
         model_name='gpt2',
         pretrained=True,
-        freeze_trans=
-        True,  # if False, we don't check arguments other than in and out
+        freeze_trans=True,  # if False, we don't check arguments other than in and out
         freeze_in=False,
         freeze_pos=False,
         freeze_ln=False,
