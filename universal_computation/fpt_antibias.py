@@ -6,16 +6,15 @@ class FPTAntiBias(nn.Module):
 
     def __init__(
             self,
-            input_max_dim, #TODO: change the name of parmameters accordingly
+            input_max_dim, 
             output_dim,
             model_name='gpt2',
-            pretrained=False,
-            return_last_only=True, #TODO: how to deal with this case? what means return_last_only
+            pretrained = True,
+            return_last_only=True, 
             use_embeddings_for_in=False,
-            linear_layer_sizes=None, #TODO: change the name of parmameters accordingly
-            out_layer_sizes=None,
+            linear_layer_sizes=None, 
             freeze_trans=True,
-            freeze_in=False,
+            freeze_linear=False,
             freeze_pos=False,
             freeze_ln=False,
             freeze_attn=True,
@@ -116,36 +115,22 @@ class FPTAntiBias(nn.Module):
                     p.requires_grad = not freeze_attn
                 else:
                     p.requires_grad = False
-        if freeze_in: #TODO: seperate linear layer and embedding layer
+        if freeze_linear: #TODO: seperate linear layer and embedding layer
             for p in self.linear_net.parameters(): 
                 p.requires_grad = False
         if freeze_out:
             for p in self.out_net.parameters():
                 p.requires_grad = False
 
-    # TODO: how do we want the format of input to be, currently assume it to input_ids of one tokenized sentences 
     def forward(self, x, output_attentions=False):
-
-        #TODO: do we pass one sentence as input at one time (x is 1-d) or multiple sentences (x is 2-d) 
-        # # reshape x
-        # orig_dim = x.shape[-1]
-        # if orig_dim > self.input_max_dim: # cut off the tail
-        #     x = x[...,0:self.input_max_dim]
-        # elif orig_dim < self.input_max_dim: # adding padding 
-        #     shape = x.shape.as_list()
-        #     shape[-1] = self.input_max_dim
-        #     shape = tuple(shape)
-        #     target_x = torch.zeros(shape)
-        #     target_x[...,:orig_dim] = x
-        #     x = target_x
 
         # token embedding + positional embedding 
         x = self.wte(x, mode="embedding") + self.position_embeds
+        y= x[:,-1]
 
         # pass throught linear layers
         x = self.linear_net(x)
 
-        
         transformer_outputs = self.transformer(
             inputs_embeds=x, 
             return_dict=True,
@@ -161,6 +146,6 @@ class FPTAntiBias(nn.Module):
         #     x = x.reshape(x.shape[0], x.shape[1] // ratio, ratio * self.output_dim)
 
         if output_attentions:
-            return x, transformer_outputs.attentions
+            return x, y,transformer_outputs.attentions
         else:
-            return x
+            return x, y
