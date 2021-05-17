@@ -34,8 +34,7 @@ def experiment(
     batch_size = kwargs['batch_size']
     device = exp_args['device']
     model_name = kwargs.get('model_name', 'gpt2')
-    input_max_dim = # TODO
-
+    input_max_dim = kwargs['input_max_dim']
 
 
     return_last_only = True
@@ -46,12 +45,15 @@ def experiment(
     output_dim = 15 #TODO
     use_embeddings = True
 
-    experiment_type = #TODO
-    ce_loss = #TODO
-    loss_fn = #TODO
-    accuracy_fn = #TODO
+    loss = torch.nn.NLLLoss().to(device)
+    softmax = torch.nn.LogSoftmax(dim=1).to(device)
 
-
+    def loss_fn(output,y,x=None):
+        return loss(softmax(output),y)
+        
+    #TODO: specify accuracy function
+    def accuracy_fn(output,y, x=None):
+        return 0
 
 
     model = FPTAntiBias(
@@ -64,7 +66,7 @@ def experiment(
         linear_layer_sizes=kwargs.get('linear_layer_sizes', None),
         out_layer_sizes=kwargs.get('out_layer_sizes', None),
         freeze_trans=kwargs.get('freeze_trans', True),
-        freeze_in=kwargs.get('freeze_in', False),
+        freeze_linear=kwargs.get('freeze_linear', False),
         freeze_pos=kwargs.get('freeze_pos', False),
         freeze_ln=kwargs.get('freeze_ln', False),
         freeze_attn=kwargs.get('freeze_attn', True),
