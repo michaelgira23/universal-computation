@@ -17,9 +17,8 @@ class AntiBiasDataset(Dataset):
         from transformers import GPT2Tokenizer
         self.tokenizer = GPT2Tokenizer.from_pretrained(model_name)
 
-        sel_cols = ['label', 'sentence']
-        col_defaults = [tf.int32, tf.string]
-        # TODO: decide the data_dir and files under this directory (i.e., training, testing, evaluation)
+        sel_cols = ['sentence']
+        col_defaults = [tf.string]
         self.d_train_str = tf.data.experimental.make_csv_dataset(data_dir+'antibias_train.tsv',
                                                batch_size,
                                                column_defaults=col_defaults,
@@ -38,21 +37,26 @@ class AntiBiasDataset(Dataset):
         self.d_test_str = self.d_test_str.unbatch()
 
 
-        # tokenize sentences
+        # tokenize sentences and add paddles at the beginning of a sentence
         def tokenize(d):
+            tokenized_sentence = self.tokenizer(d['sentence'])['input_ids']
+            length = len(tokenized_sentence)
+            if length > input_max_dim:
+                tokenized_sentence = tokenized_sentence[:input_max_dim]
+            elif length < input_max_dim:
+                listofzeros = [0] * (input_max_dim - length)
+                tokenized_sentence = listofzeros + tokenized_sentence
             return {
-                'inputs': self.tokenizer(d['sentence'],return_tensors='pt')[:input_max_dim],
-                'label': d['label']
+                'input_ids': torch.Tensor(tokenized_sentence),
+                'label': torch.Tensor(tokenized_sentence[-1])
             }
 
         train_dataset = self.d_train_str.map(tokenize, num_parallel_calls=AUTOTUNE)
         test_dataset = self.d_test_str.map(tokenize, num_parallel_calls=AUTOTUNE)
 
-        max_shape = {'inputs': [input_max_dim], 'label': []}
         train_dataset = train_dataset.shuffle(
-            buffer_size=1024, reshuffle_each_iteration=True).padded_batch(
-                batch_size, padded_shapes=max_shape)
-        test_dataset = test_dataset.padded_batch(batch_size, padded_shapes=max_shape)
+            buffer_size=1024, reshuffle_each_iteration=True).batch(batch_size)
+        test_dataset = test_dataset.batch(batch_size)
 
         train_dataset = train_dataset.prefetch(tf.data.experimental.AUTOTUNE)
         test_dataset = test_dataset.prefetch(tf.data.experimental.AUTOTUNE)
@@ -73,9 +77,9 @@ class AntiBiasDataset(Dataset):
                 self.test_enum = iter(tensorflow_datasets.as_numpy(self.d_test))
                 batch = next(self.test_enum)
 
-        x, y = batch['inputs'], batch['label']
-        x = torch.from_numpy(x).long()
-        y = torch.from_numpy(y).long()
+        x, y = batch['input_ids'], batch['label']
+        # x = torch.from_numpy(x).long()
+        # y = torch.from_numpy(y).long()
 
         x = x.to(device=self.device)
         y = y.to(device=self.device)
