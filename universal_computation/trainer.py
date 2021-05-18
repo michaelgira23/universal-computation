@@ -35,7 +35,7 @@ class Trainer:
 
     def get_loss(self, x, return_acc=False):
         out,y = self.model(x)
-        loss = self.loss_fn(out, y, x=x)
+        loss = self.loss_fn(out, y.long(), x=x)
         if return_acc:
             if self.acc_fn is None:
                 raise NotImplementedError('accuracy function not specified')
