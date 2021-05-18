@@ -1,18 +1,19 @@
 import torch
 import torch.nn as nn
 import tensorflow as tf
+import numpy as np
 
 class FPTAntiBias(nn.Module):
 
     def __init__(
             self,
             input_max_dim, 
-            output_dim,
+            device,
             model_name='gpt2',
             pretrained = True,
             return_last_only=True, 
-            use_embeddings_for_in=False,
             linear_layer_sizes=None, 
+            out_layer_sizes = None,
             freeze_trans=True,
             freeze_linear=False,
             freeze_pos=False,
@@ -20,17 +21,15 @@ class FPTAntiBias(nn.Module):
             freeze_attn=True,
             freeze_ff=True,
             freeze_out=False,
-            position_ids = None, #TODO: how to set up the position id
+            position_ids = None, 
             dropout=0.1,
             orth_gain=1.41,
     ):
         super().__init__()
 
         self.input_max_dim = input_max_dim
-        self.output_dim = output_dim
         self.model_name = model_name
         self.return_last_only = return_last_only
-        self.use_embeddings_for_in = use_embeddings_for_in
 
         self.linear_layer_sizes = [] if linear_layer_sizes is None else linear_layer_sizes
         self.out_layer_sizes = [] if out_layer_sizes is None else out_layer_sizes
@@ -62,11 +61,6 @@ class FPTAntiBias(nn.Module):
         # TODO: Embedding layer
         self.wte = pretrained_transformer.wte #token embedding layer,
         self.wpe = pretrained_transformer.wpe #positional embedding layer,
-        
-        if position_ids is None:
-            position_ids = tf.range(0, input_max_dim, dtype=tf.int32)[tf.newaxis, :]
-        self.position_ids = position_ids
-        self.position_embeds = self.wpe(position_ids)
 
         # linear layer between transformer and embedding layers
         linear_layer = []
@@ -99,7 +93,7 @@ class FPTAntiBias(nn.Module):
             out_layers.append(nn.ReLU())
             out_layers.append(nn.Dropout(dropout))
             last_output_size = size
-        out_layers.append(nn.Linear(last_output_size, output_dim))
+        out_layers.append(nn.Linear(last_output_size, embedding_size))
         self.out_net = nn.Sequential(*out_layers)
 
         if freeze_trans:
@@ -122,10 +116,18 @@ class FPTAntiBias(nn.Module):
             for p in self.out_net.parameters():
                 p.requires_grad = False
 
-    def forward(self, x, output_attentions=False):
+    def forward(self, x,output_attentions=False):
+
+        # if position_ids is None:
+        #     # position_ids = torch.from_numpy(np.arange(0,input_max_dim,dtype=int)[np.newaxis,:]).long()
+        #     position_ids = torch.as_tensor(np.arange(0,self.input_max_dim,dtype=np.int_), dtype=torch.int64).to
+        #     # position_ids = torch.range(0, 15,dtype=torch.int64)[None,:]
+        # self.position_ids = position_ids
 
         # token embedding + positional embedding 
-        x = self.wte(x, mode="embedding") + self.position_embeds
+        # x = self.wte(x, mode="embedding") + self.position_embeds
+        # x = self.wte(x) + self.wpe(position_ids)
+        x = self.wte(x)
         y= x[:,-1]
 
         # pass throught linear layers
@@ -142,8 +144,6 @@ class FPTAntiBias(nn.Module):
         #     x = x[:,-ratio:]
 
         x = self.out_net(x)
-        # if self.return_last_only and ratio > 1:
-        #     x = x.reshape(x.shape[0], x.shape[1] // ratio, ratio * self.output_dim)
 
         if output_attentions:
             return x, y,transformer_outputs.attentions
