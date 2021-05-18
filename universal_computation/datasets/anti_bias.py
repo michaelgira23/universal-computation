@@ -54,8 +54,8 @@ class AntiBiasDataset(Dataset):
                 self.test_enum = iter(tensorflow_datasets.as_numpy(self.d_test))
                 batch = next(self.test_enum)
 
-        x = torch.from_numpy(batch).int()
-
+        x = torch.from_numpy(batch).long()
+        
         x = x.to(device=self.device)
 
         self._ind += 1
