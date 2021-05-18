@@ -116,7 +116,7 @@ class FPTAntiBias(nn.Module):
             for p in self.out_net.parameters():
                 p.requires_grad = False
 
-    def forward(self, x,output_attentions=False):
+    def forward(self,x,output_attentions=False):
 
         # if position_ids is None:
         #     # position_ids = torch.from_numpy(np.arange(0,input_max_dim,dtype=int)[np.newaxis,:]).long()
@@ -127,7 +127,12 @@ class FPTAntiBias(nn.Module):
         # token embedding + positional embedding 
         # x = self.wte(x, mode="embedding") + self.position_embeds
         # x = self.wte(x) + self.wpe(position_ids)
-        x = self.wte(x)
+        device = x.device
+        batch_size = x.shape[0]
+        position_list = [[*range(int(self.input_max_dim))]] * batch_size
+        position_ids = torch.Tensor(position_list).to(device).long()
+
+        x = self.wte(x) + self.wpe(position_ids)
         y= x[:,-1]
 
         # pass throught linear layers
