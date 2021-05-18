@@ -7,7 +7,7 @@ from datetime import datetime
 import random
 import sys
 
-from universal_computation.fpt_anibias import FPTAntiBias
+from universal_computation.fpt_antibias import FPTAntiBias
 from universal_computation.trainer import Trainer
 
 
@@ -37,13 +37,8 @@ def experiment(
     input_max_dim = kwargs['input_max_dim']
 
 
-    return_last_only = True
-
-
     from universal_computation.datasets.anti_bias import AntiBiasDataset
     dataset = AntiBiasDataset(batch_size=batch_size,model_name = model_name, input_max_dim = input_max_dim, device=device)
-    output_dim = 15 #TODO
-    use_embeddings = True
 
     loss = torch.nn.NLLLoss().to(device)
     softmax = torch.nn.LogSoftmax(dim=1).to(device)
@@ -58,11 +53,9 @@ def experiment(
 
     model = FPTAntiBias(
         input_max_dim=input_max_dim,
-        output_dim=output_dim,
         model_name=model_name,
         pretrained=kwargs.get('pretrained', True),
-        return_last_only=return_last_only,
-        use_embeddings_for_in=use_embeddings,
+        return_last_only=kwargs.get('pretrained', True),
         linear_layer_sizes=kwargs.get('linear_layer_sizes', None),
         out_layer_sizes=kwargs.get('out_layer_sizes', None),
         freeze_trans=kwargs.get('freeze_trans', True),
@@ -75,6 +68,7 @@ def experiment(
         position_ids = kwargs.get('position_ids',None),
         dropout=kwargs['dropout'],
         orth_gain=kwargs['orth_gain'],
+        device = device,
     )
     model.to(device)
 
@@ -143,7 +137,7 @@ def run_experiment(
 ):
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--num_iters', '-it', type=int, default=10000,
+    parser.add_argument('--num_iters', '-it', type=int, default=10,
                         help='Number of iterations for trainer')
     parser.add_argument('--steps_per_iter', type=int, default=100,
                         help='Number of gradient steps per iteration')
