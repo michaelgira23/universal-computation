@@ -45,7 +45,7 @@ def experiment(
 
     def loss_fn(output,y,x=None):
         return loss(softmax(output),y)
-        
+
     #TODO: specify accuracy function
     def accuracy_fn(output,y, x=None):
         return 0
@@ -153,9 +153,9 @@ def run_experiment(
     parser.add_argument('--include_date', type=bool, default=True,
                         help='Whether to include date in run name')
 
-    parser.add_argument('--save_models', '-s', type=bool, default=False,
+    parser.add_argument('--save_models', '-s', type=bool, default=True,
                         help='Whether or not to save the model files locally')
-    parser.add_argument('--save_models_every', '-int', type=int, default=25,
+    parser.add_argument('--save_models_every', '-int', type=int, default=10,
                         help='How often to save models locally')
 
     parser.add_argument('--device', '-d', type=str, default='cuda',

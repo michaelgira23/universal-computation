@@ -1,0 +1,7 @@
+{
+	"python.pythonPath": "C:\\Users\\Michael\\anaconda3\\envs\\fpt\\python.exe",
+	"python.formatting.provider": "autopep8",
+	"[python]": {
+        "editor.formatOnSave": false
+    }
+}
