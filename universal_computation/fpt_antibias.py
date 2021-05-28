@@ -7,12 +7,12 @@ class FPTAntiBias(nn.Module):
 
     def __init__(
             self,
-            input_max_dim, 
+            input_max_dim,
             device,
             model_name='gpt2',
             pretrained = True,
-            return_last_only=True, 
-            linear_layer_sizes=None, 
+            return_last_only=True,
+            linear_layer_sizes=None,
             out_layer_sizes = None,
             freeze_trans=True,
             freeze_linear=False,
@@ -21,12 +21,14 @@ class FPTAntiBias(nn.Module):
             freeze_attn=True,
             freeze_ff=True,
             freeze_out=False,
-            position_ids = None, 
+            position_ids = None,
             dropout=0.1,
             orth_gain=1.41,
+            stereo_set = False
     ):
         super().__init__()
 
+        self.stereo_set = stereo_set
         self.input_max_dim = input_max_dim
         self.model_name = model_name
         self.return_last_only = return_last_only
@@ -36,9 +38,9 @@ class FPTAntiBias(nn.Module):
         self.dropout = dropout
 
         if 'gpt' in model_name:
-            assert model_name in ['gpt2', 'gpt2-medium', 'gpt2-large', 'gpt2-xl'] 
+            assert model_name in ['gpt2', 'gpt2-medium', 'gpt2-large', 'gpt2-xl']
 
-            from transformers import GPT2Model 
+            from transformers import GPT2Model
 
             pretrained_transformer = GPT2Model.from_pretrained(model_name)
             if pretrained:
@@ -57,7 +59,7 @@ class FPTAntiBias(nn.Module):
 
         else:
             raise NotImplementedError('model_name not implemented')
-        
+
         # TODO: Embedding layer
         self.wte = pretrained_transformer.wte #token embedding layer,
         self.wpe = pretrained_transformer.wpe #positional embedding layer,
@@ -76,7 +78,7 @@ class FPTAntiBias(nn.Module):
             linear_layer.append(nn.Dropout(dropout))
             last_output_size = size
 
-        final_linear = nn.Linear(last_output_size, embedding_size) 
+        final_linear = nn.Linear(last_output_size, embedding_size)
         if orth_gain is not None:
             torch.nn.init.orthogonal_(final_linear.weight, gain=orth_gain)
         final_linear.bias.data.zero_()
@@ -110,7 +112,7 @@ class FPTAntiBias(nn.Module):
                 else:
                     p.requires_grad = False
         if freeze_linear: #TODO: seperate linear layer and embedding layer
-            for p in self.linear_net.parameters(): 
+            for p in self.linear_net.parameters():
                 p.requires_grad = False
         if freeze_out:
             for p in self.out_net.parameters():
@@ -124,7 +126,7 @@ class FPTAntiBias(nn.Module):
         #     # position_ids = torch.range(0, 15,dtype=torch.int64)[None,:]
         # self.position_ids = position_ids
 
-        # token embedding + positional embedding 
+        # token embedding + positional embedding
         # x = self.wte(x, mode="embedding") + self.position_embeds
         # x = self.wte(x) + self.wpe(position_ids)
         device = x.device
@@ -138,17 +140,29 @@ class FPTAntiBias(nn.Module):
         # pass throught linear layers
         x = self.linear_net(x)
 
+        # print('Try pretrained')
+
         transformer_outputs = self.transformer(
-            inputs_embeds=x, 
+            inputs_embeds=x,
             return_dict=True,
             output_attentions=output_attentions,
+        ) if not self.stereo_set else self.transformer(
+            inputs_embeds=x
         )
-        x = transformer_outputs.last_hidden_state
+
+        # print('is stereoset?', self.stereo_set)
+        # print(transformer_outputs)
+
+        x = transformer_outputs.last_hidden_state if not self.stereo_set else transformer_outputs[0]
 
         # if self.return_last_only:
         #     x = x[:,-ratio:]
 
         x = self.out_net(x)
+
+        if self.stereo_set:
+            return x
+            # return torch.transpose(x, 0, 1)
 
         if output_attentions:
             return x, y,transformer_outputs.attentions
