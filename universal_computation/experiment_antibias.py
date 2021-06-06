@@ -2,6 +2,8 @@ import numpy as np
 import torch
 import wandb
 
+import os
+
 import argparse
 from datetime import datetime
 import random
@@ -50,26 +52,31 @@ def experiment(
     def accuracy_fn(output,y, x=None):
         return 0
 
+    model_path = exp_args['model_path']
+    model_to_load = exp_args['model_to_load']
 
-    model = FPTAntiBias(
-        input_max_dim=input_max_dim,
-        model_name=model_name,
-        pretrained=kwargs.get('pretrained', True),
-        return_last_only=kwargs.get('pretrained', True),
-        linear_layer_sizes=kwargs.get('linear_layer_sizes', None),
-        out_layer_sizes=kwargs.get('out_layer_sizes', None),
-        freeze_trans=kwargs.get('freeze_trans', True),
-        freeze_linear=kwargs.get('freeze_linear', False),
-        freeze_pos=kwargs.get('freeze_pos', False),
-        freeze_ln=kwargs.get('freeze_ln', False),
-        freeze_attn=kwargs.get('freeze_attn', True),
-        freeze_ff=kwargs.get('freeze_ff', True),
-        freeze_out=kwargs.get('freeze_out', False),
-        position_ids = kwargs.get('position_ids',None),
-        dropout=kwargs['dropout'],
-        orth_gain=kwargs['orth_gain'],
-        device = device,
-    )
+    if model_to_load and os.path.isfile(model_path):
+        model = torch.load(model_path)    
+    else:
+        model = FPTAntiBias(
+            input_max_dim=input_max_dim,
+            model_name=model_name,
+            pretrained=kwargs.get('pretrained', True),
+            return_last_only=kwargs.get('return_last_only', True),
+            linear_layer_sizes=kwargs.get('linear_layer_sizes', None),
+            out_layer_sizes=kwargs.get('out_layer_sizes', None),
+            freeze_trans=kwargs.get('freeze_trans', True),
+            freeze_linear=kwargs.get('freeze_linear', False),
+            freeze_pos=kwargs.get('freeze_pos', False),
+            freeze_ln=kwargs.get('freeze_ln', False),
+            freeze_attn=kwargs.get('freeze_attn', True),
+            freeze_ff=kwargs.get('freeze_ff', True),
+            freeze_out=kwargs.get('freeze_out', False),
+            position_ids = kwargs.get('position_ids',None),
+            dropout=kwargs['dropout'],
+            orth_gain=kwargs['orth_gain'],
+            device = device,
+        )
     model.to(device)
 
     gpu_batch_size = exp_args['gpu_batch_size']
@@ -125,7 +132,8 @@ def experiment(
 
         if save_models and ((t+1) % exp_args['save_models_every'] == 0 or
                             (t+1) == exp_args['num_iters']):
-            with open(f'models/{run_name}.pt', 'wb') as f:
+            # model_path = f'models/{run_name}.pt'
+            with open(model_path, 'wb') as f:
                 state_dict = dict(model=model.state_dict(), optim=trainer.optim.state_dict())
                 torch.save(state_dict, f)
             print(f'Saved model at {t+1} iters: {run_name}')
@@ -157,7 +165,10 @@ def run_experiment(
                         help='Whether or not to save the model files locally')
     parser.add_argument('--save_models_every', '-int', type=int, default=10,
                         help='How often to save models locally')
-
+    parser.add_argument('--model_to_load', '-mlt', type=bool, default=False,
+                        help='check whether to load a previously trained model or to initialize a new model')
+    parser.add_argument('--model_path', '-mlt', type=str, default=None,
+                        help='path to save a model')
     parser.add_argument('--device', '-d', type=str, default='cuda',
                         help='Which device for Pytorch to use')
     parser.add_argument('--gpu_batch_size', '-gbs', type=int, default=16,
