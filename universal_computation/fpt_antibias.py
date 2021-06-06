@@ -69,22 +69,24 @@ class FPTAntiBias(nn.Module):
         last_output_size = embedding_size
         for size in self.linear_layer_sizes:
             layer = nn.Linear(last_output_size, size)
-            if orth_gain is not None:
-                torch.nn.init.orthogonal_(layer.weight, gain=orth_gain)
+            nn.init.eye_(layer.weight)
+            # if orth_gain is not None:
+            #     torch.nn.init.orthogonal_(layer.weight, gain=orth_gain)
             layer.bias.data.zero_()
 
             linear_layer.append(layer)
-            linear_layer.append(nn.ReLU())
-            linear_layer.append(nn.Dropout(dropout))
+            # linear_layer.append(nn.ReLU())
+            # linear_layer.append(nn.Dropout(dropout))
             last_output_size = size
 
         final_linear = nn.Linear(last_output_size, embedding_size)
-        if orth_gain is not None:
-            torch.nn.init.orthogonal_(final_linear.weight, gain=orth_gain)
+        nn.init.eye_(final_linear.weight)
+        # if orth_gain is not None:
+        #     torch.nn.init.orthogonal_(final_linear.weight, gain=orth_gain)
         final_linear.bias.data.zero_()
 
         linear_layer.append(final_linear)
-        linear_layer.append(nn.Dropout(dropout))
+        # linear_layer.append(nn.Dropout(dropout))
 
         self.linear_net = nn.Sequential(*linear_layer)
 
