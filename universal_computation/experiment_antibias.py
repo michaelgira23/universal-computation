@@ -11,6 +11,8 @@ import sys
 
 from universal_computation.fpt_antibias import FPTAntiBias
 from universal_computation.trainer import Trainer
+from universal_computation.datasets.anti_bias import AntiBiasDataset
+
 
 
 def experiment(
@@ -37,10 +39,10 @@ def experiment(
     device = exp_args['device']
     model_name = kwargs.get('model_name', 'gpt2')
     input_max_dim = kwargs['input_max_dim']
+    vocab_size = kwargs.get('vocab_size', 50257)
 
 
-    from universal_computation.datasets.anti_bias import AntiBiasDataset
-    dataset = AntiBiasDataset(batch_size=batch_size,model_name = model_name, input_max_dim = input_max_dim, device=device)
+    dataset = AntiBiasDataset(batch_size=batch_size,model_name = model_name, input_max_dim = input_max_dim, device=device,vocab_size=vocab_size)
 
     loss = torch.nn.NLLLoss().to(device)
     softmax = torch.nn.LogSoftmax(dim=1).to(device)
@@ -76,6 +78,7 @@ def experiment(
             dropout=kwargs['dropout'],
             orth_gain=kwargs['orth_gain'],
             device = device,
+            vocab_size = vocab_size,
         )
     model.to(device)
 
@@ -91,6 +94,7 @@ def experiment(
         batch_size=gpu_batch_size if batch_size > gpu_batch_size else batch_size,
         eval_batch_size=batch_size,
         grad_accumulate=batch_size // gpu_batch_size if batch_size > gpu_batch_size else 1,
+        vocab_size = 50257,
     )
 
     """
@@ -129,6 +133,7 @@ def experiment(
 
         if log_to_wandb:
             wandb.log(trainer.diagnostics)
+
 
         if save_models and ((t+1) % exp_args['save_models_every'] == 0 or
                             (t+1) == exp_args['num_iters']):
