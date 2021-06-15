@@ -26,6 +26,7 @@ if __name__ == '__main__':
         orth_gain=1.41,
         position_ids = None,
         return_last_only = True,
+        vocab_size = 50257,
     )
 
     run_experiment(experiment_name, experiment_params)

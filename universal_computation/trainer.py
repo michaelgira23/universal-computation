@@ -33,9 +33,9 @@ class Trainer:
 
         self.diagnostics = {'Gradient Steps': 0}
 
-    def get_loss(self, x, return_acc=False):
-        out,y = self.model(x)
-        loss = self.loss_fn(out, y.long(), x=x)
+    def get_loss(self, x, y, return_acc=False):
+        hidden_states,output = self.model(x)
+        loss = self.loss_fn(output, y, x=x)
         if return_acc:
             if self.acc_fn is None:
                 raise NotImplementedError('accuracy function not specified')
@@ -56,8 +56,8 @@ class Trainer:
         for _ in tqdm(range(self.steps_per_epoch)):
             step_loss = 0
             for _ in range(self.grad_accumulate):
-                x = self.dataset.get_batch(self.batch_size, train=True)
-                loss, acc = self.get_loss(x, return_acc=True)
+                x,y = self.dataset.get_batch(self.batch_size, train=True)
+                loss, acc = self.get_loss(x, y,return_acc=True)
                 loss = loss / self.grad_accumulate
                 loss.backward()
                 step_loss += loss.detach().cpu().item()
@@ -80,7 +80,7 @@ class Trainer:
         with torch.no_grad():
             for _ in range(test_steps):
                 x= self.dataset.get_batch(self.eval_batch_size, train=False)
-                loss, acc = self.get_loss(x,return_acc=True)
+                loss, acc = self.get_loss(x,y,return_acc=True)
                 test_loss += loss.detach().cpu().item() / test_steps
                 accuracy += acc / test_steps
         end_test_time = time.time()

@@ -24,7 +24,8 @@ class FPTAntiBias(nn.Module):
             position_ids = None,
             dropout=0.1,
             orth_gain=1.41,
-            stereo_set = False
+            stereo_set = False,
+            vocab_size = 50257,
     ):
         super().__init__()
 
@@ -91,7 +92,8 @@ class FPTAntiBias(nn.Module):
         self.linear_net = nn.Sequential(*linear_layer)
 
         out_layers = []
-        last_output_size = embedding_size
+        # last_output_size = embedding_size
+        last_output_size = vocab_size
         for size in self.out_layer_sizes:
             out_layers.append(nn.Linear(last_output_size, size))
             out_layers.append(nn.ReLU())
@@ -107,13 +109,15 @@ class FPTAntiBias(nn.Module):
                     p.requires_grad = not freeze_ln
                 elif 'wpe' in name:
                     p.requires_grad = not freeze_pos
+                elif 'wte' in name:
+                    p.requires_grad = not freeze_pos
                 elif 'mlp' in name:
                     p.requires_grad = not freeze_ff
                 elif 'attn' in name:
                     p.requires_grad = not freeze_attn
                 else:
                     p.requires_grad = False
-        if freeze_linear: #TODO: seperate linear layer and embedding layer
+        if freeze_linear:
             for p in self.linear_net.parameters():
                 p.requires_grad = False
         if freeze_out:
@@ -137,7 +141,7 @@ class FPTAntiBias(nn.Module):
         position_ids = torch.Tensor(position_list).to(device).long()
 
         x = self.wte(x) + self.wpe(position_ids)
-        y= x[:,-1]
+        # y= x[:,-1]
 
         # pass throught linear layers
         x = self.linear_net(x)
@@ -155,18 +159,18 @@ class FPTAntiBias(nn.Module):
         # print('is stereoset?', self.stereo_set)
         # print(transformer_outputs)
 
-        x = transformer_outputs.last_hidden_state if not self.stereo_set else transformer_outputs[0]
+        hidden_states = transformer_outputs.last_hidden_state if not self.stereo_set else transformer_outputs[0]
 
         # if self.return_last_only:
         #     x = x[:,-ratio:]
 
-        x = self.out_net(x)
+        output = self.out_net(hidden_states)
 
         if self.stereo_set:
-            return x
-            # return torch.transpose(x, 0, 1)
+            return output
+            # return torch.transpose(output, 0, 1)
 
         if output_attentions:
-            return x, y,transformer_outputs.attentions
+            return hidden_states,output,transformer_outputs.attentions
         else:
-            return x, y
+            return hidden_states,output
