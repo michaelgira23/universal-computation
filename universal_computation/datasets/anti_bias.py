@@ -9,7 +9,7 @@ import tensorflow_datasets
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 class AntiBiasDataset(Dataset):
-    def __init__(self, device,vocab_size,batch_size, data_dir = "../universal-computation/unprejudiced_dataset/",model_name = "gpt2",input_max_dim = 50,*args, **kwargs):
+    def __init__(self, device,vocab_size,batch_size, eval_batch_size,data_dir = "../unprejudiced_dataset/",model_name = "gpt2",input_max_dim = 50,*args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.batch_size = batch_size  # we fix it so we can use dataloader
@@ -39,7 +39,9 @@ class AntiBiasDataset(Dataset):
 
         self.train_dataset = self.train_dataset.shuffle(
             buffer_size=1024, reshuffle_each_iteration=True).batch(batch_size)
-        self.test_dataset = self.test_dataset.batch(batch_size)
+        self.test_dataset = self.test_dataset.batch(eval_batch_size)
+        # self.test_dataset = self.test_dataset.shuffle(
+        #     buffer_size=1024, reshuffle_each_iteration=True).batch(batch_size)
 
         self.train_dataset = self.train_dataset.prefetch(tf.data.experimental.AUTOTUNE)
         self.test_dataset = self.test_dataset.prefetch(tf.data.experimental.AUTOTUNE)
@@ -49,20 +51,21 @@ class AntiBiasDataset(Dataset):
         self.test_enum = iter(tensorflow_datasets.as_numpy(self.test_dataset))
 
     
-    def get_batch(self, batch_size=None, input_max_dim=50, model_name = "gpt2", train=True):
+    def get_batch(self,train=True):
         if train:
             batch = next(self.train_enum, None)
             if batch is None:
-                self.train_enum = iter(tensorflow_datasets.as_numpy(self.d_train))
+                self.train_enum = iter(tensorflow_datasets.as_numpy(self.train_dataset))
                 batch = next(self.train_enum)
         else:
             batch = next(self.test_enum, None)
             if batch is None:
-                self.test_enum = iter(tensorflow_datasets.as_numpy(self.d_test))
+                self.test_enum = iter(tensorflow_datasets.as_numpy(self.test_dataset))
                 batch = next(self.test_enum)
         
+
         x = torch.from_numpy(batch[:,1:]).long()
-        y_indices = batch[:,1]
+        y_indices = batch[:,0]
         y = np.zeros((y_indices.size, self.vocab_size))
         y[np.arange(y_indices.size),y_indices] = 1
         y = torch.from_numpy(y).long()

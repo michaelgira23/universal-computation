@@ -1,5 +1,7 @@
 import sys
 sys.path.append('./')
+sys.path.append('../')
+sys.path.append('../../')
 from universal_computation.experiment_antibias import run_experiment
 
 if __name__ == '__main__':
@@ -22,6 +24,7 @@ if __name__ == '__main__':
         out_layer_sizes=None,  # ex. [32, 32] creates a 2-layer MLP with dimension 32
         learning_rate=1e-3,
         batch_size=2,
+        eval_batch_size = 8,
         dropout=0.1,
         orth_gain=1.41,
         position_ids = None,

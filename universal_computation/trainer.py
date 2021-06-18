@@ -40,7 +40,7 @@ class Trainer:
             if self.acc_fn is None:
                 raise NotImplementedError('accuracy function not specified')
             accs = self.acc_fn(
-                out.detach().cpu().numpy(),
+                output.detach().cpu().numpy(),
                 y.detach().cpu().numpy(),
                 x=x.detach().cpu().numpy(),
             )
@@ -56,7 +56,7 @@ class Trainer:
         for _ in tqdm(range(self.steps_per_epoch)):
             step_loss = 0
             for _ in range(self.grad_accumulate):
-                x,y = self.dataset.get_batch(self.batch_size, train=True)
+                x,y = self.dataset.get_batch(train=True)
                 loss, acc = self.get_loss(x, y,return_acc=True)
                 loss = loss / self.grad_accumulate
                 loss.backward()
@@ -79,7 +79,7 @@ class Trainer:
         start_test_time = time.time()
         with torch.no_grad():
             for _ in range(test_steps):
-                x= self.dataset.get_batch(self.eval_batch_size, train=False)
+                x,y= self.dataset.get_batch(train=False)
                 loss, acc = self.get_loss(x,y,return_acc=True)
                 test_loss += loss.detach().cpu().item() / test_steps
                 accuracy += acc / test_steps

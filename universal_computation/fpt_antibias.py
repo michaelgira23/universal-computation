@@ -92,14 +92,13 @@ class FPTAntiBias(nn.Module):
         self.linear_net = nn.Sequential(*linear_layer)
 
         out_layers = []
-        # last_output_size = embedding_size
-        last_output_size = vocab_size
+        last_output_size = embedding_size
         for size in self.out_layer_sizes:
             out_layers.append(nn.Linear(last_output_size, size))
             out_layers.append(nn.ReLU())
             out_layers.append(nn.Dropout(dropout))
             last_output_size = size
-        out_layers.append(nn.Linear(last_output_size, embedding_size))
+        out_layers.append(nn.Linear(last_output_size, vocab_size))
         self.out_net = nn.Sequential(*out_layers)
 
         if freeze_trans:
